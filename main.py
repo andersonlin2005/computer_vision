@@ -113,6 +113,20 @@ def compute_ssim_for_overlap(img1, img2, overlap_coords):
     
     return ssim(overlap1_gray, overlap2_gray, data_range=255)
 
+def crop_black_border(img):
+    """自動裁切全黑邊界區域"""
+    if len(img.shape) == 3:
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    else:
+        gray = img
+    _, thresh = cv2.threshold(gray, 1, 255, cv2.THRESH_BINARY)
+    coords = cv2.findNonZero(thresh)
+    if coords is None:
+        return img  # 全黑直接回傳
+    x, y, w, h = cv2.boundingRect(coords)
+    cropped = img[y:y+h, x:x+w]
+    return cropped
+
 def process_image_pair(left_path, right_path, output_dir, filename):
     """Process a pair of images and return overlap coordinates."""
     left_img = cv2.imread(left_path)
@@ -147,6 +161,9 @@ def process_image_pair(left_path, right_path, output_dir, filename):
     
     # Stitch images
     result = stitch_images(left_img, right_img, H, output_shape)
+    
+    # 裁切黑邊
+    result = crop_black_border(result)
     
     # Get overlap coordinates
     overlap_coords = get_overlap_coordinates(left_img, right_img, H)
